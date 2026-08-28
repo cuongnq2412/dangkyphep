@@ -244,40 +244,134 @@
 
     <!-- MODAL 2: USER GUIDE & APPROVAL RULES -->
     <div class="modal-backdrop" id="guideModal">
-        <div class="modal-dialog modal-large">
+        <div class="modal-dialog modal-large" style="max-width: 820px;">
             <div class="modal-head">
-                <h3 class="modal-title">
+                <h3 class="modal-title" style="display:flex; align-items:center; gap:8px;">
                     <i class="fa-solid fa-book-open" style="color: #0284c7;"></i>
-                    <span>Hướng Dẫn & Quy Định Xét Duyệt Nghỉ Phép</span>
+                    <span>Hướng Dẫn Đăng Ký & Quy Định Duyệt Lịch Phép</span>
                 </h3>
                 <button class="modal-close-btn" id="closeGuideModal">&times;</button>
             </div>
-            <div class="modal-body">
-                <div style="display:flex; flex-direction:column; gap:14px; font-size:13px; color:#334155; line-height:1.6;">
-                    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:14px;">
-                        <h4 style="color:#0369a1; font-size:14px; font-weight:800; margin-bottom:6px;">
-                            <i class="fa-solid fa-scale-balanced"></i> Nguyên Tắc Duyệt Đơn Công Bằng Của Trưởng Nhóm
-                        </h4>
-                        <p><strong>1. Xét mức độ cấp thiết của lý do:</strong> Ưu tiên hàng đầu cho các lý do sức khỏe, y tế, việc hiếu hỷ hoặc sự cố bất khả kháng. Các lý do giải trí, du lịch sẽ được xếp sau.</p>
-                        <p style="margin-top:6px;"><strong>2. Quy tắc thời gian nộp (Ai nộp trước ưu tiên trước):</strong> Khi các lý do tương đương nhau, Trưởng nhóm sẽ ưu tiên duyệt cho người nộp đơn sớm hơn (hệ thống ghi nhận chính xác từng giây).</p>
+            <div class="modal-body" style="padding: 20px 24px;">
+                <!-- Hero Header Banner -->
+                <div class="guide-hero-banner" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:14px; padding:16px 20px; display:flex; align-items:center; gap:16px; margin-bottom:24px;">
+                    <div style="width:46px; height:46px; border-radius:50%; background:#0284c7; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; box-shadow: 0 4px 10px rgba(2,132,199,0.25);">
+                        <i class="fa-regular fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h4 style="color:#0369a1; font-size:15px; font-weight:800; margin-bottom:3px;">Quy Trình Đăng Ký & Nguyên Tắc Duyệt Lịch Công Bằng</h4>
+                        <p style="font-size:12.5px; color:#0c4a6e; margin:0;">Đăng ký đơn giản qua 3 bước và tuân thủ các quy định ưu tiên xét duyệt lịch phép của Trưởng nhóm.</p>
+                    </div>
+                </div>
+
+                <!-- 3 Steps Process Grid -->
+                <div class="guide-steps-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+                    <!-- BƯỚC 1 -->
+                    <div class="guide-step-card" style="border:1px solid #e2e8f0; border-radius:14px; padding:22px 14px 16px; background:#ffffff; text-align:center; position:relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="position:absolute; top:-11px; left:16px; background:#0284c7; color:#fff; font-size:10px; font-weight:800; padding:2px 10px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">BƯỚC 1</div>
+                        <div style="background:#f0f9ff; border:1px dashed #7dd3fc; border-radius:10px; padding:10px 14px; margin:6px auto 14px; max-width:190px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:12px; color:#0369a1; margin-bottom:4px;">
+                                <span>15/08</span>
+                                <span style="font-size:10px; background:#e0f2fe; color:#0284c7; padding:1px 6px; border-radius:8px;">Thứ Bảy</span>
+                            </div>
+                            <div style="font-size:11px; color:#0284c7; text-align:left; display:flex; align-items:center; gap:5px;">
+                                <i class="fa-regular fa-circle" style="font-size:10px;"></i> Chưa chọn
+                            </div>
+                        </div>
+                        <h4 style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:6px;">1. Chọn Ngày Xin Nghỉ</h4>
+                        <p style="font-size:11.5px; color:#64748b; line-height:1.5; margin:0;">Chạm vào bất kỳ ô thẻ hiển thị ngày bạn muốn xin nghỉ phép trên Lịch chính.</p>
                     </div>
 
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px;">
-                        <h4 style="color:#0f172a; font-size:14px; font-weight:800; margin-bottom:8px;">
-                            <i class="fa-solid fa-shield-halved"></i> Ý Nghĩa Các Thẻ Trạng Thái
-                        </h4>
-                        <ul style="padding-left:20px; display:flex; flex-direction:column; gap:6px;">
-                            <li><strong style="color:#0284c7;">Thẻ Xanh Dương:</strong> Ngày còn trống, mọi người bấm vào để nộp đơn.</li>
-                            <li><strong style="color:#d97706;">Thẻ Cam (Chờ duyệt):</strong> Ngày đã có đơn gửi, vẫn cho phép gửi thêm đơn để Trưởng nhóm cân nhắc xét duyệt.</li>
-                            <li><strong style="color:#15803d;">Thẻ Xanh Lá (Đã duyệt):</strong> Đã có nhân viên được duyệt nghỉ chính thức.</li>
-                            <li><strong style="color:#e11d48;">Thẻ Đỏ (Chủ Nhật):</strong> Ngày nghỉ định kỳ / Trực phân công, khóa đăng ký phép.</li>
-                        </ul>
+                    <!-- BƯỚC 2 -->
+                    <div class="guide-step-card" style="border:1px solid #e2e8f0; border-radius:14px; padding:22px 14px 16px; background:#ffffff; text-align:center; position:relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="position:absolute; top:-11px; left:16px; background:#0284c7; color:#fff; font-size:10px; font-weight:800; padding:2px 10px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">BƯỚC 2</div>
+                        <div style="background:#ffffff; border:1.5px solid #0284c7; border-radius:10px; padding:7px 12px; margin:6px auto 14px; max-width:190px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="width:20px; height:20px; border-radius:50%; background:#0284c7; color:#fff; font-size:8.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">AN</span>
+                                <span style="font-size:11px; font-weight:700; color:#0f172a;">NV001 – Văn An</span>
+                            </div>
+                            <i class="fa-solid fa-circle-check" style="color:#0284c7; font-size:13px;"></i>
+                        </div>
+                        <h4 style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:6px;">2. Chọn Tên & Điền Lý Do</h4>
+                        <p style="font-size:11.5px; color:#64748b; line-height:1.5; margin:0;">Chạm đúng Thẻ Tên bạn và <strong>nhập nội dung Lý Do Xin Nghỉ Phép</strong> chính xác, rõ ràng.</p>
+                    </div>
+
+                    <!-- BƯỚC 3 -->
+                    <div class="guide-step-card" style="border:1px solid #e2e8f0; border-radius:14px; padding:22px 14px 16px; background:#ffffff; text-align:center; position:relative; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+                        <div style="position:absolute; top:-11px; left:16px; background:#0284c7; color:#fff; font-size:10px; font-weight:800; padding:2px 10px; border-radius:12px; text-transform:uppercase; letter-spacing:0.5px;">BƯỚC 3</div>
+                        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:10px 14px; margin:6px auto 14px; max-width:190px;">
+                            <div style="display:flex; justify-content:space-between; font-weight:800; font-size:12px; color:#047857; margin-bottom:4px;">
+                                <span>15/08</span>
+                                <span style="font-size:10px; background:#d1fae5; color:#047857; padding:1px 6px; border-radius:8px;">Thứ Bảy</span>
+                            </div>
+                            <div style="font-size:11px; font-weight:700; color:#059669; text-align:left; display:flex; align-items:center; gap:5px;">
+                                <i class="fa-solid fa-user-check" style="font-size:10px;"></i> NV001 – Văn An
+                            </div>
+                        </div>
+                        <h4 style="font-size:13.5px; font-weight:800; color:#0f172a; margin-bottom:6px;">3. Gửi Đơn & Chờ Duyệt</h4>
+                        <p style="font-size:11.5px; color:#64748b; line-height:1.5; margin:0;">Bấm <strong>Lưu / Gửi Đơn</strong>. Đơn chuyển sang <em>Chờ Duyệt</em>. Khi Trưởng nhóm duyệt, tên bạn sẽ xuất hiện công khai màu xanh lá.</p>
+                    </div>
+                </div>
+
+                <!-- Rules and Principles Section -->
+                <div style="margin-top:24px;">
+                    <h3 style="font-size:14.5px; font-weight:800; color:#0369a1; display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+                        <i class="fa-solid fa-scale-balanced" style="font-size:17px;"></i>
+                        <span>Nguyên Tắc & Tiêu Chí Duyệt Lịch Nghỉ Phép Của Trưởng Nhóm</span>
+                    </h3>
+
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <!-- Tiêu chí 1 -->
+                        <div style="background:#f0f9ff; border-left:4px solid #0284c7; border-radius:0 12px 12px 0; padding:14px 18px;">
+                            <h4 style="color:#0369a1; font-size:13px; font-weight:800; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-heart-pulse" style="color:#0284c7;"></i> 1. Xét Độ Ưu Tiên Lý Do Xin Nghỉ:
+                            </h4>
+                            <ul style="margin:0; padding-left:20px; font-size:12px; color:#334155; line-height:1.6;">
+                                <li><strong>Ưu tiên Hàng Đầu:</strong> Các lý do liên quan đến <em>sức khỏe, khám chữa bệnh, sự cố gia đình cấp bách, yếu tố bất khả kháng</em>.</li>
+                                <li><strong>Xếp sau:</strong> Các lý do mang tính chất <em>du lịch, đi chơi, nghỉ dưỡng, giải trí hoặc việc riêng cá nhân</em>.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Tiêu chí 2 -->
+                        <div style="background:#fffbeb; border-left:4px solid #d97706; border-radius:0 12px 12px 0; padding:14px 18px;">
+                            <h4 style="color:#b45309; font-size:13px; font-weight:800; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-clock-rotate-left" style="color:#d97706;"></i> 2. Quy Tắc Ưu Tiên Thời Gian Đăng Ký (Nộp Đơn Trước/Sau):
+                            </h4>
+                            <p style="margin:0; font-size:12px; color:#78350f; line-height:1.6;">
+                                • Trong trường hợp cùng 1 ngày có nhiều nhân viên đăng ký với các lý do có mức độ ưu tiên tương đương nhau, Trưởng nhóm sẽ <strong>ưu tiên duyệt cho nhân viên đăng ký sớm nhất</strong> (hệ thống tự động ghi nhận thời gian nộp chính xác đến từng giây).
+                            </p>
+                        </div>
+
+                        <!-- Tiêu chí 3 -->
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-left:4px solid #64748b; border-radius:0 12px 12px 0; padding:14px 18px;">
+                            <h4 style="color:#1e293b; font-size:13px; font-weight:800; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                                <i class="fa-solid fa-shield-halved" style="color:#64748b;"></i> 3. Trạng Thái Thẻ Lịch Phép:
+                            </h4>
+                            <div style="display:flex; flex-direction:column; gap:8px; font-size:12px; color:#334155;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="width:9px; height:9px; border-radius:50%; background:#0284c7; flex-shrink:0;"></span>
+                                    <span><strong style="color:#0284c7;">Thẻ Xanh Dương (Chưa chọn):</strong> Ngày còn trống, mọi người có thể bấm vào đăng ký.</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="width:9px; height:9px; border-radius:50%; background:#f59e0b; flex-shrink:0;"></span>
+                                    <span><strong style="color:#d97706;">Thẻ Cam (Chờ duyệt):</strong> Ngày đã có đơn gửi, vẫn cho phép gửi thêm đơn để Trưởng nhóm xét duyệt.</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="width:9px; height:9px; border-radius:50%; background:#10b981; flex-shrink:0;"></span>
+                                    <span><strong style="color:#059669;">Thẻ Xanh Lá (Đã duyệt):</strong> Đã có đơn được Trưởng nhóm phê duyệt chính thức.</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="width:9px; height:9px; border-radius:50%; background:#ef4444; flex-shrink:0;"></span>
+                                    <span><strong style="color:#dc2626;">Thẻ Đỏ (Chủ Nhật):</strong> Ngày nghỉ định kỳ hàng tuần, hệ thống tự động khóa.</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-foot">
                 <button type="button" class="btn btn-primary" id="btnCloseGuideSubmit">
-                    <i class="fa-solid fa-check"></i> Đã Hiểu
+                    <i class="fa-solid fa-check"></i> Đã Hiểu & Đóng
                 </button>
             </div>
         </div>
