@@ -646,15 +646,18 @@
             // 3. PENDING APPLICATIONS CARD
             else if (pendingRegs.length > 0) {
                 card.className = 'bento-day-card card-theme-pending';
+                const firstPending = pendingRegs[0];
+                const extraCountText = pendingRegs.length > 1 ? ` (+${pendingRegs.length - 1} đơn)` : ' (Chờ duyệt)';
+
                 card.innerHTML = `
                     <div class="card-header-row">
                         <span class="card-date-badge">${displayDateStr}</span>
                         <span class="card-day-lbl">${dayName}</span>
                     </div>
                     <div class="card-body-content">
-                        <div class="card-pending-chip">
-                            <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning-dark);"></i>
-                            <span>Chờ duyệt (${pendingRegs.length} đơn)</span>
+                        <div class="card-pending-chip" title="Chờ duyệt: ${escapeHtml(firstPending.empCode)} - ${escapeHtml(firstPending.empName)} (${escapeHtml(firstPending.reason)})">
+                            <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning-dark); flex-shrink:0;"></i>
+                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; font-weight:700;">${escapeHtml(firstPending.empCode)} - ${escapeHtml(firstPending.empName)}${extraCountText}</span>
                         </div>
                     </div>
                 `;
@@ -836,12 +839,19 @@
             if (reg.status === 'pending') {
                 actionBtns = `
                     <button class="btn btn-primary btn-sm btn-appr-approve" data-id="${reg.id}"><i class="fa-solid fa-check"></i> Duyệt</button>
-                    <button class="btn btn-danger btn-sm btn-appr-reject" data-id="${reg.id}"><i class="fa-solid fa-xmark"></i> Từ Chối</button>
+                    <button class="btn btn-secondary btn-sm btn-appr-reject" data-id="${reg.id}"><i class="fa-solid fa-xmark"></i> Từ Chối</button>
+                    <button class="btn btn-danger btn-sm btn-appr-delete" data-id="${reg.id}" title="Xóa vĩnh viễn đơn này"><i class="fa-solid fa-trash-can"></i> Xóa</button>
                 `;
             } else if (reg.status === 'approved') {
-                actionBtns = `<button class="btn btn-danger btn-sm btn-appr-reject" data-id="${reg.id}"><i class="fa-solid fa-xmark"></i> Đổi sang Từ Chối</button>`;
+                actionBtns = `
+                    <button class="btn btn-secondary btn-sm btn-appr-reject" data-id="${reg.id}"><i class="fa-solid fa-xmark"></i> Hủy Duyệt</button>
+                    <button class="btn btn-danger btn-sm btn-appr-delete" data-id="${reg.id}" title="Xóa vĩnh viễn đơn này"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                `;
             } else {
-                actionBtns = `<button class="btn btn-primary btn-sm btn-appr-approve" data-id="${reg.id}"><i class="fa-solid fa-check"></i> Duyệt Lại</button>`;
+                actionBtns = `
+                    <button class="btn btn-primary btn-sm btn-appr-approve" data-id="${reg.id}"><i class="fa-solid fa-check"></i> Duyệt Lại</button>
+                    <button class="btn btn-danger btn-sm btn-appr-delete" data-id="${reg.id}" title="Xóa vĩnh viễn đơn này"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                `;
             }
 
             const tr = document.createElement('tr');
@@ -851,7 +861,7 @@
                 <td><span style="font-size:11px; color:#64748b;">${escapeHtml(reg.createdAt || 'N/A')}</span></td>
                 <td><div style="max-width:240px;">${escapeHtml(reg.reason || 'Nghỉ phép cá nhân')}</div></td>
                 <td>${badge}</td>
-                <td><div style="display:flex; gap:6px;">${actionBtns}</div></td>
+                <td><div style="display:flex; gap:6px; flex-wrap:wrap;">${actionBtns}</div></td>
             `;
             adminRegsTableBody.appendChild(tr);
         });
@@ -1119,11 +1129,12 @@
             });
         }
 
-        // Admin Approval Actions (Approve / Reject)
+        // Admin Approval Actions (Approve / Reject / Delete)
         if (adminRegsTableBody) {
             adminRegsTableBody.addEventListener('click', async (e) => {
                 const approveBtn = e.target.closest('.btn-appr-approve');
                 const rejectBtn = e.target.closest('.btn-appr-reject');
+                const deleteBtn = e.target.closest('.btn-appr-delete');
 
                 if (approveBtn) {
                     const regId = approveBtn.dataset.id;
@@ -1148,6 +1159,20 @@
                         }
                         refreshAllUI();
                         showToast(`Đã TỪ CHỐI đơn của ${reg.empName}!`, 'info');
+                    }
+                } else if (deleteBtn) {
+                    const regId = deleteBtn.dataset.id;
+                    const reg = registrationsList.find(r => String(r.id) === String(regId));
+                    if (reg) {
+                        if (confirm(`Bạn có chắc chắn muốn XÓA vĩnh viễn đơn nghỉ ngày ${reg.dateStr} của ${reg.empName}?`)) {
+                            registrationsList = registrationsList.filter(r => String(r.id) !== String(regId));
+                            saveData();
+                            if (supabaseClient) {
+                                await supabaseClient.from('registrations').delete().eq('id', regId);
+                            }
+                            refreshAllUI();
+                            showToast(`Đã XÓA vĩnh viễn đơn của ${reg.empName}!`, 'success');
+                        }
                     }
                 }
             });
