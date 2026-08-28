@@ -117,6 +117,14 @@
     const registerReason = document.getElementById('registerReason');
     const pendingListBanner = document.getElementById('pendingListBanner');
     const pendingItemsContainer = document.getElementById('pendingItemsContainer');
+    const pendingCountBadge = document.getElementById('pendingCountBadge');
+    const adminDayToolbar = document.getElementById('adminDayToolbar');
+    const adminAssignEmpSelect = document.getElementById('adminAssignEmpSelect');
+    const adminAssignStatusSelect = document.getElementById('adminAssignStatusSelect');
+    const adminAssignReasonInput = document.getElementById('adminAssignReasonInput');
+    const btnAdminAssignSubmit = document.getElementById('btnAdminAssignSubmit');
+
+    let isAdminSession = false;
 
     // Admin Dashboard Elements
     const adminModal = document.getElementById('adminModal');
@@ -384,18 +392,48 @@
                 supabaseClient.from('employees').select('*')
             ]);
 
-            // 1. Process Registrations
+            // 1. Process Registrations with Smart Bundling Support
             if (!regRes.error && regRes.data) {
-                registrationsList = regRes.data.map(item => ({
-                    id: item.id || `reg_${item.date_str}_${item.emp_code}`,
-                    dateStr: item.date_str,
-                    empCode: item.emp_code,
-                    empName: item.emp_name,
-                    reason: item.note || item.reason || 'Nghỉ phép cá nhân',
-                    status: item.status || 'pending',
-                    adminNote: item.admin_note || '',
-                    createdAt: item.created_at || ''
-                }));
+                const unpackedRegs = [];
+                regRes.data.forEach(item => {
+                    let hasBundled = false;
+                    if (item.note && (item.note.startsWith('[') && item.note.endsWith(']'))) {
+                        try {
+                            const list = JSON.parse(item.note);
+                            if (Array.isArray(list) && list.length > 0) {
+                                list.forEach((p, idx) => {
+                                    unpackedRegs.push({
+                                        id: p.id || `reg_${item.date_str}_${p.empCode || idx}`,
+                                        dateStr: item.date_str,
+                                        empCode: p.empCode || p.emp_code || '',
+                                        empName: p.empName || p.emp_name || '',
+                                        reason: p.reason || p.note || 'Nghỉ phép cá nhân',
+                                        status: p.status || 'pending',
+                                        adminNote: p.adminNote || p.admin_note || '',
+                                        createdAt: p.createdAt || p.created_at || item.created_at || ''
+                                    });
+                                });
+                                hasBundled = true;
+                            }
+                        } catch (e) {
+                            hasBundled = false;
+                        }
+                    }
+
+                    if (!hasBundled) {
+                        unpackedRegs.push({
+                            id: item.id || `reg_${item.date_str}_${item.emp_code}`,
+                            dateStr: item.date_str,
+                            empCode: item.emp_code,
+                            empName: item.emp_name,
+                            reason: item.reason || item.note || 'Nghỉ phép cá nhân',
+                            status: item.status || 'pending',
+                            adminNote: item.admin_note || '',
+                            createdAt: item.created_at || ''
+                        });
+                    }
+                });
+                registrationsList = unpackedRegs;
             }
 
             // 2. Process App Config
@@ -447,6 +485,43 @@
             }
             return true;
         } catch (e) {
+            return false;
+        }
+    }
+
+    async function syncDayToSupabase(dateStr) {
+        if (!supabaseClient) return false;
+        try {
+            const dayRegs = registrationsList.filter(r => r.dateStr === dateStr);
+            if (dayRegs.length === 0) {
+                await supabaseClient.from('registrations').delete().eq('date_str', dateStr);
+                return true;
+            }
+
+            const approved = dayRegs.find(r => r.status === 'approved');
+            const rep = approved || dayRegs[0];
+            const bundleJson = JSON.stringify(dayRegs);
+            const statusVal = approved ? 'approved' : (dayRegs.some(r => r.status === 'pending') ? 'pending' : 'rejected');
+
+            const payload = {
+                date_str: dateStr,
+                emp_code: rep.empCode,
+                emp_name: rep.empName,
+                note: bundleJson,
+                reason: rep.reason || 'Nghỉ phép cá nhân',
+                status: statusVal,
+                created_at: rep.createdAt || getCloudServerNow().toLocaleString('vi-VN')
+            };
+
+            const { data: existing } = await supabaseClient.from('registrations').select('id').eq('date_str', dateStr);
+            if (existing && existing.length > 0) {
+                await supabaseClient.from('registrations').update(payload).eq('date_str', dateStr);
+            } else {
+                await supabaseClient.from('registrations').insert([payload]);
+            }
+            return true;
+        } catch (err) {
+            console.warn('Sync day error:', err);
             return false;
         }
     }
@@ -952,6 +1027,7 @@
             passwordForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 if (adminPassInput && adminPassInput.value.trim() === ADMIN_PASSCODE) {
+                    isAdminSession = true;
                     closeModal(passwordModal);
                     renderAdminRegsTable();
                     renderAdminSundayShifts();
@@ -988,42 +1064,102 @@
             });
         });
 
-        // Click Day Card on Calendar Grid (Open Register / View Modal)
-        if (daysListEl) {
-            daysListEl.addEventListener('click', (e) => {
-                const card = e.target.closest('.bento-day-card:not(.card-theme-sunday)');
-                if (!card) return;
+        function populateAdminAssignSelect() {
+            if (!adminAssignEmpSelect) return;
+            adminAssignEmpSelect.innerHTML = '';
+            employees.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = `${emp.code}|${emp.name}`;
+                opt.textContent = `${emp.code} – ${emp.name}`;
+                adminAssignEmpSelect.appendChild(opt);
+            });
+        }
 
-                const dateFormatted = card.dataset.date;
-                const titleStr = card.dataset.title;
-                const isTargetConfig = card.dataset.isTarget === 'true';
+        function renderDayModalContent(dateFormatted, isTargetConfig) {
+            if (!modalDateInput) return;
+            modalDateInput.value = dateFormatted;
+            if (registerReason) registerReason.value = '';
 
-                if (modalDateTitle) modalDateTitle.textContent = titleStr;
-                if (modalDateInput) modalDateInput.value = dateFormatted;
-                if (registerReason) registerReason.value = '';
+            const dayAllRegs = registrationsList.filter(r => r.dateStr === dateFormatted);
+            const approvedList = dayAllRegs.filter(r => r.status === 'approved');
+            const pendingList = dayAllRegs.filter(r => r.status === 'pending');
 
-                // If not in target open month, open in read-only mode
+            // 1. ADMIN MODE
+            if (isAdminSession) {
+                if (adminDayToolbar) adminDayToolbar.style.display = 'block';
+                populateAdminAssignSelect();
+
+                if (pendingListBanner) pendingListBanner.style.display = 'block';
+                if (pendingCountBadge) pendingCountBadge.textContent = `${dayAllRegs.length} đơn`;
+
+                if (pendingItemsContainer) {
+                    if (dayAllRegs.length === 0) {
+                        pendingItemsContainer.innerHTML = `<div style="font-size:12px; color:#64748b; padding:4px 0;">Chưa có đơn nào trong ngày này.</div>`;
+                    } else {
+                        pendingItemsContainer.innerHTML = dayAllRegs.map(reg => {
+                            let badgeHtml = `<span style="font-size:10px; background:#fef3c7; color:#d97706; padding:1px 6px; border-radius:6px; font-weight:700;">Chờ Duyệt</span>`;
+                            let actBtns = `
+                                <button type="button" class="btn btn-primary btn-sm btn-modal-act" data-act="approve" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-check"></i> Duyệt</button>
+                                <button type="button" class="btn btn-secondary btn-sm btn-modal-act" data-act="reject" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-xmark"></i> Từ Chối</button>
+                                <button type="button" class="btn btn-danger btn-sm btn-modal-act" data-act="delete" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                            `;
+
+                            if (reg.status === 'approved') {
+                                badgeHtml = `<span style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:6px; font-weight:700;">Đã Duyệt</span>`;
+                                actBtns = `
+                                    <button type="button" class="btn btn-secondary btn-sm btn-modal-act" data-act="reject" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-xmark"></i> Hủy Duyệt</button>
+                                    <button type="button" class="btn btn-danger btn-sm btn-modal-act" data-act="delete" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                                `;
+                            } else if (reg.status === 'rejected') {
+                                badgeHtml = `<span style="font-size:10px; background:#fee2e2; color:#b91c1c; padding:1px 6px; border-radius:6px; font-weight:700;">Từ Chối</span>`;
+                                actBtns = `
+                                    <button type="button" class="btn btn-primary btn-sm btn-modal-act" data-act="approve" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-check"></i> Duyệt Lại</button>
+                                    <button type="button" class="btn btn-danger btn-sm btn-modal-act" data-act="delete" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+                                `;
+                            }
+
+                            return `
+                                <div style="background:#ffffff; border:1px solid #e2e8f0; padding:8px 10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                    <div>
+                                        <div style="font-size:12px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px;">
+                                            <span>${escapeHtml(reg.empCode)} - ${escapeHtml(reg.empName)}</span>
+                                            ${badgeHtml}
+                                        </div>
+                                        <div style="font-size:11px; color:#64748b; margin-top:2px;">"${escapeHtml(reg.reason || reg.note || 'N/A')}" • <span style="font-size:10px;">${escapeHtml(reg.createdAt || '')}</span></div>
+                                    </div>
+                                    <div style="display:flex; gap:4px;">${actBtns}</div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                if (registerForm) registerForm.style.display = 'none'; // Admin uses admin toolbar
+            } 
+            // 2. REGULAR USER MODE
+            else {
+                if (adminDayToolbar) adminDayToolbar.style.display = 'none';
+
                 if (!isTargetConfig || !isTargetMonthOpen) {
                     if (registerForm) registerForm.style.display = 'none';
                     if (pendingListBanner) {
                         pendingListBanner.style.display = 'block';
-                        const approvedList = registrationsList.filter(r => r.dateStr === dateFormatted && r.status === 'approved');
                         let htmlStr = `<div style="font-size:12px; color:#0369a1; padding:4px 0;"><i class="fa-solid fa-lock"></i> Kỳ đăng ký tháng này đang đóng hoặc lưu trữ.</div>`;
                         if (approvedList.length > 0) {
-                            htmlStr += approvedList.map(a => `<div style="font-weight:700; color:#15803d;">• Đã duyệt: ${escapeHtml(a.empCode)} - ${escapeHtml(a.empName)}</div>`).join('');
+                            htmlStr += approvedList.map(a => `<div style="font-weight:700; color:#15803d; font-size:12px; margin-top:4px;">• Đã duyệt: ${escapeHtml(a.empCode)} - ${escapeHtml(a.empName)}</div>`).join('');
                         }
                         if (pendingItemsContainer) pendingItemsContainer.innerHTML = htmlStr;
                     }
                 } else {
                     if (registerForm) registerForm.style.display = 'block';
                     if (pendingListBanner) {
-                        const pendings = registrationsList.filter(r => r.dateStr === dateFormatted && r.status === 'pending');
-                        if (pendings.length > 0) {
+                        if (pendingList.length > 0) {
                             pendingListBanner.style.display = 'block';
+                            if (pendingCountBadge) pendingCountBadge.textContent = `${pendingList.length} đơn`;
                             if (pendingItemsContainer) {
-                                pendingItemsContainer.innerHTML = pendings.map(p => `
+                                pendingItemsContainer.innerHTML = pendingList.map(p => `
                                     <div style="background:#ffffff; border:1px solid #fde68a; padding:6px 8px; border-radius:6px; font-size:11px;">
-                                        <strong>${escapeHtml(p.empCode)} - ${escapeHtml(p.empName)}</strong>: "${escapeHtml(p.reason)}"
+                                        <strong>${escapeHtml(p.empCode)} - ${escapeHtml(p.empName)}</strong>: "${escapeHtml(p.reason || p.note || '')}"
                                     </div>
                                 `).join('');
                             }
@@ -1032,9 +1168,103 @@
                         }
                     }
                 }
+            }
+        }
 
+        // Click Day Card on Calendar Grid (Open Register / View Modal)
+        if (daysListEl) {
+            daysListEl.addEventListener('click', (e) => {
+                const card = e.target.closest('.bento-day-card');
+                if (!card) return;
+
+                const dateFormatted = card.dataset.date;
+                const titleStr = card.dataset.title;
+                const isTargetConfig = card.dataset.isTarget === 'true';
+
+                if (modalDateTitle) modalDateTitle.textContent = titleStr;
+                renderDayModalContent(dateFormatted, isTargetConfig);
                 renderEmployeeCardsGrid();
                 openModal(registerModal);
+            });
+        }
+
+        // Action Buttons inside Date Modal (for Admin)
+        if (pendingItemsContainer) {
+            pendingItemsContainer.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.btn-modal-act');
+                if (!btn) return;
+                const act = btn.dataset.act;
+                const regId = btn.dataset.id;
+                const reg = registrationsList.find(r => String(r.id) === String(regId));
+                if (!reg) return;
+
+                if (act === 'approve') {
+                    reg.status = 'approved';
+                    saveData();
+                    if (supabaseClient) await syncDayToSupabase(reg.dateStr);
+                    refreshAllUI();
+                    renderDayModalContent(reg.dateStr, true);
+                    showToast(`Đã DUYỆT đơn cho ${reg.empName}!`, 'success');
+                } else if (act === 'reject') {
+                    reg.status = 'rejected';
+                    saveData();
+                    if (supabaseClient) await syncDayToSupabase(reg.dateStr);
+                    refreshAllUI();
+                    renderDayModalContent(reg.dateStr, true);
+                    showToast(`Đã TỪ CHỐI đơn của ${reg.empName}!`, 'info');
+                } else if (act === 'delete') {
+                    if (confirm(`Bạn có chắc chắn muốn XÓA vĩnh viễn đơn của ${reg.empName}?`)) {
+                        const dStr = reg.dateStr;
+                        registrationsList = registrationsList.filter(r => String(r.id) !== String(regId));
+                        saveData();
+                        if (supabaseClient) await syncDayToSupabase(dStr);
+                        refreshAllUI();
+                        renderDayModalContent(dStr, true);
+                        showToast(`Đã XÓA vĩnh viễn đơn của ${reg.empName}!`, 'success');
+                    }
+                }
+            });
+        }
+
+        // Admin Assign Submit (Silent - No loud public broadcast)
+        if (btnAdminAssignSubmit) {
+            btnAdminAssignSubmit.addEventListener('click', async () => {
+                const dateStr = modalDateInput.value;
+                const selectedVal = adminAssignEmpSelect ? adminAssignEmpSelect.value : '';
+                const statusVal = adminAssignStatusSelect ? adminAssignStatusSelect.value : 'approved';
+                const reasonVal = adminAssignReasonInput ? adminAssignReasonInput.value.trim() : 'Trưởng nhóm phân công';
+
+                if (!selectedVal) {
+                    showToast('Vui lòng chọn nhân viên!', 'warning');
+                    return;
+                }
+
+                const [empCode, empName] = selectedVal.split('|');
+                const nowStr = getCloudServerNow().toLocaleString('vi-VN');
+                const tempRegId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+                // Remove existing if any on same day and emp
+                registrationsList = registrationsList.filter(r => !(r.dateStr === dateStr && r.empCode === empCode));
+
+                registrationsList.push({
+                    id: tempRegId,
+                    dateStr: dateStr,
+                    empCode: empCode,
+                    empName: empName,
+                    reason: reasonVal || 'Trưởng nhóm phân công',
+                    status: statusVal,
+                    adminNote: 'Phân công bởi Trưởng nhóm',
+                    createdAt: nowStr
+                });
+
+                saveData(false); // Silent save (no broadcast alert)
+                refreshAllUI();
+                renderDayModalContent(dateStr, true);
+                showToast(`Đã lưu phân công cho ${empName}!`, 'success');
+
+                if (supabaseClient) {
+                    await syncDayToSupabase(dateStr);
+                }
             });
         }
 
@@ -1081,35 +1311,8 @@
                 const nowStr = getCloudServerNow().toLocaleString('vi-VN');
                 const tempRegId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-                const payload = {
-                    date_str: dateStr,
-                    emp_code: empCode,
-                    emp_name: empName,
-                    reason: reasonVal,
-                    note: reasonVal,
-                    status: 'pending',
-                    created_at: nowStr
-                };
-
-                let assignedId = tempRegId;
-
-                if (supabaseClient) {
-                    updateCloudBadge('syncing', 'Đang gửi đơn...');
-                    try {
-                        const { data, error } = await supabaseClient.from('registrations').insert([payload]).select();
-                        if (error) {
-                            console.warn('Insert error detail:', error);
-                            showToast(`Lưu ý: ${error.message || 'Lỗi lưu Cloud'}`, 'warning');
-                        } else if (data && data.length > 0) {
-                            assignedId = data[0].id || tempRegId;
-                        }
-                    } catch (err) {
-                        console.warn('Insert exception:', err);
-                    }
-                }
-
                 registrationsList.push({
-                    id: assignedId,
+                    id: tempRegId,
                     dateStr: dateStr,
                     empCode: empCode,
                     empName: empName,
@@ -1123,6 +1326,12 @@
                 closeModal(registerModal);
                 refreshAllUI();
                 showToast(`Đã gửi đơn xin nghỉ ngày ${dateStr}!`, 'success');
+
+                if (supabaseClient) {
+                    updateCloudBadge('syncing', 'Đang gửi đơn...');
+                    await syncDayToSupabase(dateStr);
+                    updateCloudBadge('online', 'Cloud Realtime');
+                }
             });
         }
 
@@ -1139,9 +1348,7 @@
                     if (reg) {
                         reg.status = 'approved';
                         saveData();
-                        if (supabaseClient) {
-                            await supabaseClient.from('registrations').update({ status: 'approved' }).eq('id', regId);
-                        }
+                        if (supabaseClient) await syncDayToSupabase(reg.dateStr);
                         refreshAllUI();
                         showToast(`Đã DUYỆT đơn cho ${reg.empName}!`, 'success');
                     }
@@ -1151,9 +1358,7 @@
                     if (reg) {
                         reg.status = 'rejected';
                         saveData();
-                        if (supabaseClient) {
-                            await supabaseClient.from('registrations').update({ status: 'rejected' }).eq('id', regId);
-                        }
+                        if (supabaseClient) await syncDayToSupabase(reg.dateStr);
                         refreshAllUI();
                         showToast(`Đã TỪ CHỐI đơn của ${reg.empName}!`, 'info');
                     }
@@ -1162,11 +1367,10 @@
                     const reg = registrationsList.find(r => String(r.id) === String(regId));
                     if (reg) {
                         if (confirm(`Bạn có chắc chắn muốn XÓA vĩnh viễn đơn nghỉ ngày ${reg.dateStr} của ${reg.empName}?`)) {
+                            const dStr = reg.dateStr;
                             registrationsList = registrationsList.filter(r => String(r.id) !== String(regId));
                             saveData();
-                            if (supabaseClient) {
-                                await supabaseClient.from('registrations').delete().eq('id', regId);
-                            }
+                            if (supabaseClient) await syncDayToSupabase(dStr);
                             refreshAllUI();
                             showToast(`Đã XÓA vĩnh viễn đơn của ${reg.empName}!`, 'success');
                         }
