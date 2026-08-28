@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cổng Đăng Ký Nghỉ Phép Trực Tuyến</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://iili.io/F66acRs.png">
+    <link rel="apple-touch-icon" href="https://iili.io/F66acRs.png">
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 Pro Vectors -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Modern Bento Style System -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- TOP REALTIME STATUS BAR -->
+    <div class="top-status-banner open" id="topStatusBanner">
+        <div class="banner-content">
+            <span class="banner-pulse"></span>
+            <i class="fa-solid fa-circle-check" id="bannerIcon"></i>
+            <span id="bannerText">MỞ ĐĂNG KÝ NGHỈ PHÉP - THÁNG 09/2026</span>
+            <span class="cloud-status-chip" id="cloudStatusChip" title="Supabase Cloud Realtime Đang Kết Nối">
+                <i class="fa-solid fa-circle" id="cloudStatusIcon" style="font-size: 8px; color: #22c55e;"></i>
+                <span>Cloud Sync</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- MAIN APP HEADER -->
+    <header class="app-header">
+        <div class="container header-container">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div class="brand-info">
+                    <h1 class="brand-title">
+                        ĐĂNG KÝ NGHỈ PHÉP
+                        <span class="brand-badge">SaaS v2.0</span>
+                    </h1>
+                    <p class="brand-sub" id="appHeaderSub">THÁNG 09 / 2026 • ĐĂNG KÝ & DUYỆT LỊCH TỰ ĐỘNG</p>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="btn btn-secondary btn-sm" id="btnHeaderGuide">
+                    <i class="fa-solid fa-circle-question" style="color: #0284c7;"></i>
+                    <span>Hướng Dẫn</span>
+                </button>
+                <button class="btn btn-icon-only" id="btnAdminKey" title="Không Gian Quản Trị Trưởng Nhóm">
+                    <i class="fa-solid fa-key" style="color: #4f46e5;"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="container" style="margin-top: 24px;">
+
+        <!-- COUNTDOWN DYNAMIC ISLAND WIDGET (Ẩn khi đang mở tự do) -->
+        <div class="countdown-widget" id="countdownOverlay" style="display: none;">
+            <div class="cd-widget-info">
+                <div class="cd-widget-icon" id="cdLockIcon">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+                <div>
+                    <h4 class="cd-widget-title" id="cdTitleText">Chưa Đến Thời Gian Mở Đăng Ký</h4>
+                    <p class="cd-widget-desc" id="cdDescText">Hệ thống sẽ tự động mở đăng ký theo lịch hẹn:</p>
+                </div>
+            </div>
+
+            <div class="clock-digits-group">
+                <div class="clock-box">
+                    <div class="clock-val" id="cdDays">00</div>
+                    <div class="clock-lbl">Ngày</div>
+                </div>
+                <div class="clock-colon">:</div>
+                <div class="clock-box">
+                    <div class="clock-val" id="cdHours">00</div>
+                    <div class="clock-lbl">Giờ</div>
+                </div>
+                <div class="clock-colon">:</div>
+                <div class="clock-box">
+                    <div class="clock-val" id="cdMins">00</div>
+                    <div class="clock-lbl">Phút</div>
+                </div>
+                <div class="clock-colon">:</div>
+                <div class="clock-box">
+                    <div class="clock-val" id="cdSecs">00</div>
+                    <div class="clock-lbl">Giây</div>
+                </div>
+            </div>
+
+            <button class="btn btn-secondary btn-sm" id="btnCountdownGuide">
+                <i class="fa-solid fa-book-open"></i> Xem Quy Định
+            </button>
+        </div>
+
+        <!-- BENTO CONTROL BAR: MONTH SWITCHER & FILTER -->
+        <div class="bento-control-bar">
+            <!-- Smart Month Navigator -->
+            <div class="month-navigator">
+                <button class="nav-month-btn" id="btnPrevMonth" title="Tháng trước">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="current-month-display">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span id="currentMonthName">Tháng 09/2026</span>
+                    <span class="month-status-tag open" id="currentMonthStatusBadge">Đang Mở</span>
+                </div>
+                <button class="nav-month-btn" id="btnNextMonth" title="Tháng tiếp theo">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <!-- Filter Pills -->
+            <div class="filter-pills-group">
+                <button class="filter-pill active" data-filter="all">Tất cả</button>
+                <button class="filter-pill" data-filter="available">Còn trống</button>
+                <button class="filter-pill" data-filter="registered">Đã có đơn</button>
+                <button class="filter-pill" data-filter="sunday">Chủ Nhật</button>
+            </div>
+
+            <!-- Instant Search -->
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Tìm Ngày, Tên, Mã NV, Lý do...">
+            </div>
+        </div>
+
+        <!-- CALENDAR META & LEGEND -->
+        <div class="calendar-meta-header">
+            <h3 class="calendar-meta-title" id="gridTitleSection">
+                <i class="fa-solid fa-calendar-week" style="color: #4f46e5;"></i>
+                <span>Bảng Lịch Nghỉ Phép Tháng 09/2026</span>
+            </h3>
+            
+            <div class="legend-chips">
+                <div class="legend-chip">
+                    <span class="dot-indicator dot-available"></span>
+                    <span>Chưa chọn</span>
+                </div>
+                <div class="legend-chip">
+                    <span class="dot-indicator dot-pending"></span>
+                    <span>Chờ duyệt</span>
+                </div>
+                <div class="legend-chip">
+                    <span class="dot-indicator dot-approved"></span>
+                    <span>Đã duyệt</span>
+                </div>
+                <div class="legend-chip">
+                    <span class="dot-indicator dot-sunday"></span>
+                    <span>Trực Chủ Nhật</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BENTO CALENDAR GRID CARDS -->
+        <div class="bento-calendar-grid" id="daysList">
+            <!-- Dynamic Bento Day Cards rendered by app.js -->
+        </div>
+
+    </main>
+
+    <!-- ==========================================================================
+         MODALS SYSTEM
+         ========================================================================== -->
+
+    <!-- MODAL 1: REGISTER LEAVE (FOR EMPLOYEES) -->
+    <div class="modal-backdrop" id="registerModal">
+        <div class="modal-dialog">
+            <div class="modal-head">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-pen-to-square" style="color: #4f46e5;"></i>
+                    <span>Đăng Ký Xin Nghỉ Phép</span>
+                </h3>
+                <button class="modal-close-btn" id="closeRegisterModal">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Date Hero Banner -->
+                <div class="selected-date-hero">
+                    <div class="date-hero-icon">
+                        <i class="fa-solid fa-calendar-day"></i>
+                    </div>
+                    <div class="date-hero-text">
+                        <h4 id="modalDateTitle">Thứ ..., Ngày ...</h4>
+                        <p>Chọn thẻ nhân viên của bạn và nhập lý do xin nghỉ phép:</p>
+                    </div>
+                </div>
+
+                <!-- Existing Pending Applications Banner -->
+                <div id="pendingListBanner" style="display:none; margin-bottom:16px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:12px;">
+                    <div style="font-weight:700; font-size:12px; color:#b45309; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Các đơn đang chờ Trưởng nhóm duyệt trong ngày này:</span>
+                    </div>
+                    <div id="pendingItemsContainer" style="display:flex; flex-direction:column; gap:6px; max-height:140px; overflow-y:auto;"></div>
+                </div>
+
+                <form id="registerForm">
+                    <input type="hidden" id="modalDateInput">
+                    <input type="hidden" id="selectedEmpValue" required>
+
+                    <!-- Employee Picker Grid -->
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-user-check" style="color: #4f46e5;"></i> Chạm Chọn Thẻ Tên Của Bạn (*):</label>
+                        <div class="emp-picker-grid" id="empCardGrid">
+                            <!-- Dynamic Employee Avatar Cards rendered by app.js -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Reason Suggestion Chips -->
+                    <div class="form-group">
+                        <label class="form-label"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Chọn nhanh lý do mẫu:</label>
+                        <div class="quick-reason-chips">
+                            <span class="reason-chip" data-reason="Việc gia đình riêng">🏠 Việc gia đình</span>
+                            <span class="reason-chip" data-reason="Khám sức khỏe cá nhân">🏥 Khám sức khỏe</span>
+                            <span class="reason-chip" data-reason="Về quê thăm người thân">🚗 Về quê</span>
+                            <span class="reason-chip" data-reason="Nghỉ phép cá nhân">☕ Nghỉ cá nhân</span>
+                            <span class="reason-chip" data-reason="Giải quyết thủ tục hành chính">📄 Thủ tục giấy tờ</span>
+                        </div>
+                        <label for="registerReason" class="form-label"><i class="fa-solid fa-comment-dots" style="color: #0284c7;"></i> Nội dung lý do chi tiết (*):</label>
+                        <textarea id="registerReason" class="form-control" rows="2" placeholder="Nhập lý do chi tiết để Trưởng nhóm ưu tiên xét duyệt..." required></textarea>
+                    </div>
+
+                    <div class="modal-foot" style="padding:16px 0 0 0; background:transparent; border-top:none;">
+                        <button type="button" class="btn btn-secondary" id="btnCancelRegister">Hủy Bỏ</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitRegister">
+                            <i class="fa-solid fa-paper-plane"></i> Gửi Đơn Ngay
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: USER GUIDE & APPROVAL RULES -->
+    <div class="modal-backdrop" id="guideModal">
+        <div class="modal-dialog modal-large">
+            <div class="modal-head">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-book-open" style="color: #0284c7;"></i>
+                    <span>Hướng Dẫn & Quy Định Xét Duyệt Nghỉ Phép</span>
+                </h3>
+                <button class="modal-close-btn" id="closeGuideModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex; flex-direction:column; gap:14px; font-size:13px; color:#334155; line-height:1.6;">
+                    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:14px;">
+                        <h4 style="color:#0369a1; font-size:14px; font-weight:800; margin-bottom:6px;">
+                            <i class="fa-solid fa-scale-balanced"></i> Nguyên Tắc Duyệt Đơn Công Bằng Của Trưởng Nhóm
+                        </h4>
+                        <p><strong>1. Xét mức độ cấp thiết của lý do:</strong> Ưu tiên hàng đầu cho các lý do sức khỏe, y tế, việc hiếu hỷ hoặc sự cố bất khả kháng. Các lý do giải trí, du lịch sẽ được xếp sau.</p>
+                        <p style="margin-top:6px;"><strong>2. Quy tắc thời gian nộp (Ai nộp trước ưu tiên trước):</strong> Khi các lý do tương đương nhau, Trưởng nhóm sẽ ưu tiên duyệt cho người nộp đơn sớm hơn (hệ thống ghi nhận chính xác từng giây).</p>
+                    </div>
+
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:14px;">
+                        <h4 style="color:#0f172a; font-size:14px; font-weight:800; margin-bottom:8px;">
+                            <i class="fa-solid fa-shield-halved"></i> Ý Nghĩa Các Thẻ Trạng Thái
+                        </h4>
+                        <ul style="padding-left:20px; display:flex; flex-direction:column; gap:6px;">
+                            <li><strong style="color:#0284c7;">Thẻ Xanh Dương:</strong> Ngày còn trống, mọi người bấm vào để nộp đơn.</li>
+                            <li><strong style="color:#d97706;">Thẻ Cam (Chờ duyệt):</strong> Ngày đã có đơn gửi, vẫn cho phép gửi thêm đơn để Trưởng nhóm cân nhắc xét duyệt.</li>
+                            <li><strong style="color:#15803d;">Thẻ Xanh Lá (Đã duyệt):</strong> Đã có nhân viên được duyệt nghỉ chính thức.</li>
+                            <li><strong style="color:#e11d48;">Thẻ Đỏ (Chủ Nhật):</strong> Ngày nghỉ định kỳ / Trực phân công, khóa đăng ký phép.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn-primary" id="btnCloseGuideSubmit">
+                    <i class="fa-solid fa-check"></i> Đã Hiểu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADMIN AUTHENTICATION -->
+    <div class="modal-backdrop" id="passwordModal">
+        <div class="modal-dialog" style="max-width: 420px;">
+            <div class="modal-head">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-shield-halved" style="color: #4f46e5;"></i>
+                    <span>Xác Thực Trưởng Nhóm</span>
+                </h3>
+                <button class="modal-close-btn" id="closePasswordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm">
+                    <div class="form-group">
+                        <label for="adminPassInput" class="form-label">Nhập mật khẩu quản trị:</label>
+                        <input type="password" id="adminPassInput" class="form-control" placeholder="Nhập mật khẩu..." required autocomplete="current-password">
+                        <div id="passErrorMsg" style="display:none; color:#f43f5e; font-size:12px; font-weight:700; margin-top:6px;">
+                            <i class="fa-solid fa-circle-exclamation"></i> Mật khẩu không chính xác!
+                        </div>
+                    </div>
+                    <div class="modal-foot" style="padding:10px 0 0 0; border:none; background:transparent;">
+                        <button type="button" class="btn btn-secondary" id="btnCancelPass">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-unlock"></i> Mở Bảng Quản Trị
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ADMIN BENTO STUDIO (FULLSCREEN DASHBOARD) -->
+    <div class="modal-backdrop" id="adminModal">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-head">
+                <h3 class="modal-title">
+                    <i class="fa-solid fa-user-gear" style="color: #4f46e5;"></i>
+                    <span>Admin Studio • Trung Tâm Quản Trị Trưởng Nhóm</span>
+                </h3>
+                <button class="modal-close-btn" id="closeAdminModal">&times;</button>
+            </div>
+
+            <!-- Admin Tab Bar -->
+            <div class="admin-tab-nav">
+                <button class="admin-tab-btn active" data-tab="tabManageRegs">
+                    <i class="fa-solid fa-clipboard-check"></i> <span>Duyệt Đơn Nghỉ Phép</span>
+                </button>
+                <button class="admin-tab-btn" data-tab="tabSundayShifts">
+                    <i class="fa-solid fa-user-clock"></i> <span>Phân Công Chủ Nhật</span>
+                </button>
+                <button class="admin-tab-btn" data-tab="tabTimeWindow">
+                    <i class="fa-solid fa-sliders"></i> <span>Cấu Hình Tháng & Giờ</span>
+                </button>
+                <button class="admin-tab-btn" data-tab="tabEmployees">
+                    <i class="fa-solid fa-users"></i> <span>Nhân Viên</span>
+                </button>
+                <button class="admin-tab-btn" data-tab="tabSupabase">
+                    <i class="fa-solid fa-cloud"></i> <span>Supabase Cloud</span>
+                </button>
+            </div>
+
+            <!-- Tab 1: Duyệt Đơn Nghỉ Phép -->
+            <div class="admin-tab-pane active" id="tabManageRegs">
+                <!-- Bento Stats Matrix -->
+                <div class="bento-stats-matrix">
+                    <div class="stat-box">
+                        <div class="stat-icon-wrap" style="background:#e0f2fe; color:#0284c7;">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <div>
+                            <div class="stat-num" id="cntAllRegs">0</div>
+                            <div class="stat-lbl">Tổng Số Đơn</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon-wrap" style="background:#fef3c7; color:#d97706;">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div>
+                            <div class="stat-num" id="cntPendingRegs">0</div>
+                            <div class="stat-lbl">Chờ Phê Duyệt</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon-wrap" style="background:#d1fae5; color:#059669;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div>
+                            <div class="stat-num" id="cntApprovedRegs">0</div>
+                            <div class="stat-lbl">Đã Phê Duyệt</div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon-wrap" style="background:#ffe4e6; color:#e11d48;">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                        <div>
+                            <div class="stat-num" id="cntRejectedRegs">0</div>
+                            <div class="stat-lbl">Đã Từ Chối</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Approval Actions Bar -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm appr-filter-btn active" data-appr-filter="all">Tất cả</button>
+                        <button type="button" class="btn btn-secondary btn-sm appr-filter-btn" data-appr-filter="pending">Chờ Duyệt</button>
+                        <button type="button" class="btn btn-secondary btn-sm appr-filter-btn" data-appr-filter="approved">Đã Duyệt</button>
+                        <button type="button" class="btn btn-secondary btn-sm appr-filter-btn" data-appr-filter="rejected">Từ Chối</button>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" id="btnExportExcel">
+                        <i class="fa-solid fa-file-excel"></i> Xuất File Excel / CSV
+                    </button>
+                </div>
+
+                <!-- Datatable -->
+                <div class="data-table-wrap">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Ngày Xin Nghỉ</th>
+                                <th>Nhân Viên</th>
+                                <th>Thời Gian Nộp</th>
+                                <th>Lý Do Xin Nghỉ</th>
+                                <th>Trạng Thái</th>
+                                <th>Thao Tác Duyệt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminRegsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Phân Công Chủ Nhật -->
+            <div class="admin-tab-pane" id="tabSundayShifts">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <h4 style="font-size:15px; font-weight:800; color:#0f172a;"><i class="fa-solid fa-user-clock" style="color:#4f46e5;"></i> Phân Công Nhân Viên Trực Chủ Nhật</h4>
+                        <p style="font-size:12px; color:#64748b;">Chọn tối đa 02 nhân viên đi làm / trực cho mỗi ngày Chủ Nhật trong tháng.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnSaveSundayShifts">
+                        <i class="fa-solid fa-floppy-disk"></i> Lưu Phân Công
+                    </button>
+                </div>
+
+                <div id="sundayShiftsGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:14px;"></div>
+            </div>
+
+            <!-- Tab 3: Cấu Hình Tháng & Giờ -->
+            <div class="admin-tab-pane" id="tabTimeWindow">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:18px;">
+                    <div style="background:var(--surface-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px;">
+                        <h4 style="font-size:15px; font-weight:800; margin-bottom:10px;"><i class="fa-solid fa-calendar-days" style="color:#4f46e5;"></i> Chọn Tháng Mở Đăng Ký</h4>
+                        <div class="form-group">
+                            <label class="form-label" for="configMonthSelect">Tháng:</label>
+                            <select id="configMonthSelect" class="form-control">
+                                <option value="0">Tháng 01</option>
+                                <option value="1">Tháng 02</option>
+                                <option value="2">Tháng 03</option>
+                                <option value="3">Tháng 04</option>
+                                <option value="4">Tháng 05</option>
+                                <option value="5">Tháng 06</option>
+                                <option value="6">Tháng 07</option>
+                                <option value="7">Tháng 08</option>
+                                <option value="8" selected>Tháng 09</option>
+                                <option value="9">Tháng 10</option>
+                                <option value="10">Tháng 11</option>
+                                <option value="11">Tháng 12</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="configYearSelect">Năm:</label>
+                            <select id="configYearSelect" class="form-control">
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:14px;">
+                            <button type="button" class="btn btn-primary btn-sm" id="btnSetOpenNow" style="flex:1;">
+                                <i class="fa-solid fa-lock-open"></i> Mở Tự Do Ngay
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" id="btnSetLockNow" style="flex:1;">
+                                <i class="fa-solid fa-lock"></i> Khóa Lịch Ngay
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="background:var(--surface-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px;">
+                        <h4 style="font-size:15px; font-weight:800; margin-bottom:10px;"><i class="fa-solid fa-clock" style="color:#0284c7;"></i> Hẹn Giờ Mở/Khóa Tự Động</h4>
+                        <div class="form-group">
+                            <label class="form-label" for="startTimeInput">Thời gian bắt đầu mở:</label>
+                            <input type="datetime-local" id="startTimeInput" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="endTimeInput">Thời gian kết thúc khóa:</label>
+                            <input type="datetime-local" id="endTimeInput" class="form-control">
+                        </div>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSaveTimeConfig" style="width:100%; margin-top:10px;">
+                            <i class="fa-solid fa-floppy-disk"></i> Lưu Hẹn Giờ Đếm Ngược
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div style="margin-top:20px; background:#fff1f2; border:1px solid #fecdd3; border-radius:var(--radius-md); padding:16px;">
+                    <h4 style="color:#e11d48; font-size:14px; font-weight:800; margin-bottom:4px;"><i class="fa-solid fa-triangle-exclamation"></i> Vùng Nguy Hiểm</h4>
+                    <p style="font-size:12px; color:#64748b; margin-bottom:10px;">Xóa dữ liệu đơn xin nghỉ phép trong tháng đang chọn.</p>
+                    <button type="button" class="btn btn-danger btn-sm" id="btnClearAllRegs">
+                        <i class="fa-solid fa-trash-can"></i> Xóa Đơn Đăng Ký Tháng Đang Chọn
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab 4: Nhân Viên -->
+            <div class="admin-tab-pane" id="tabEmployees">
+                <div style="background:var(--surface-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; margin-bottom:18px;">
+                    <h4 style="font-size:15px; font-weight:800; margin-bottom:12px;">Thêm Nhân Viên Mới</h4>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <input type="text" id="newEmpId" class="form-control" placeholder="Mã NV (VD: NV006)" style="max-width:160px;">
+                        <input type="text" id="newEmpName" class="form-control" placeholder="Họ và Tên Nhân Viên" style="flex:1; min-width:200px;">
+                        <button type="button" class="btn btn-primary" id="btnAddEmployee">
+                            <i class="fa-solid fa-plus"></i> Thêm Nhân Viên
+                        </button>
+                    </div>
+                </div>
+
+                <div class="data-table-wrap">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Mã NV</th>
+                                <th>Tên Nhân Viên</th>
+                                <th>Hành Động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 5: Supabase Cloud -->
+            <div class="admin-tab-pane" id="tabSupabase">
+                <div style="background:var(--surface-muted); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:18px; max-width:640px;">
+                    <h4 style="font-size:15px; font-weight:800; margin-bottom:12px;"><i class="fa-solid fa-cloud" style="color:#0284c7;"></i> Cấu Hình Supabase Cloud</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="supabaseUrl">Supabase URL:</label>
+                        <input type="text" id="supabaseUrl" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="supabaseKey">Supabase Anon Key:</label>
+                        <input type="password" id="supabaseKey" class="form-control">
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:14px;">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnSaveSupabase">
+                            <i class="fa-solid fa-link"></i> Lưu Kết Nối Cloud
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btnDisconnectSupabase">
+                            Dùng Mặc Định Hệ Thống
+                        </button>
+                    </div>
+                    <div id="supabaseStatusAlert" style="margin-top:12px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION SHELF -->
+    <div class="toast-shelf" id="toastContainer"></div>
+
+    <!-- APP ENGINE JS -->
+    <script src="js/app.js"></script>
+</body>
+</html>
