@@ -118,6 +118,10 @@
     const pendingListBanner = document.getElementById('pendingListBanner');
     const pendingItemsContainer = document.getElementById('pendingItemsContainer');
     const pendingCountBadge = document.getElementById('pendingCountBadge');
+    const adminDayWrapper = document.getElementById('adminDayWrapper');
+    const btnToggleAdminAssign = document.getElementById('btnToggleAdminAssign');
+    const toggleAdminAssignIcon = document.getElementById('toggleAdminAssignIcon');
+    const toggleAdminAssignText = document.getElementById('toggleAdminAssignText');
     const adminDayToolbar = document.getElementById('adminDayToolbar');
     const adminAssignEmpSelect = document.getElementById('adminAssignEmpSelect');
     const adminAssignStatusSelect = document.getElementById('adminAssignStatusSelect');
@@ -647,12 +651,13 @@
             const displayDateStr = `${String(dayNum).padStart(2, '0')}/${mStr}`;
 
             const dayRegs = registrationsList.filter(r => r.dateStr === dateFormatted);
-            const approvedRegs = dayRegs.filter(r => r.status === 'approved');
-            const pendingRegs = dayRegs.filter(r => r.status === 'pending');
+            const lockedReg = dayRegs.find(r => r.status === 'locked' || r.empCode === 'KHONG DANG KY' || r.empCode === 'LOCKED');
+            const approvedRegs = dayRegs.filter(r => r.status === 'approved' && r !== lockedReg);
+            const pendingRegs = dayRegs.filter(r => r.status === 'pending' && r !== lockedReg);
 
             // Apply Filters
-            if (activeFilter === 'available' && (isSunday || approvedRegs.length > 0)) continue;
-            if (activeFilter === 'registered' && approvedRegs.length === 0 && pendingRegs.length === 0) continue;
+            if (activeFilter === 'available' && (isSunday || lockedReg || approvedRegs.length > 0)) continue;
+            if (activeFilter === 'registered' && !lockedReg && approvedRegs.length === 0 && pendingRegs.length === 0) continue;
             if (activeFilter === 'sunday' && !isSunday) continue;
 
             if (searchQuery) {
@@ -699,7 +704,24 @@
                     <div class="card-body-content">${sundayAssignedHtml}</div>
                 `;
             }
-            // 2. APPROVED CARD
+            // 2. LOCKED DAY CARD (Khóa lịch có lý do)
+            else if (lockedReg) {
+                card.className = 'bento-day-card card-theme-locked';
+                const lockReason = lockedReg.reason || lockedReg.note || 'Lịch đã khóa';
+                card.innerHTML = `
+                    <div class="card-header-row">
+                        <span class="card-date-badge">${displayDateStr}</span>
+                        <span class="card-day-lbl" style="background:rgba(124,58,237,0.12); color:#6d28d9;">Đã Khóa</span>
+                    </div>
+                    <div class="card-body-content">
+                        <div class="card-locked-chip" title="Lý do khóa: ${escapeHtml(lockReason)}">
+                            <i class="fa-solid fa-lock" style="color:#7c3aed; flex-shrink:0;"></i>
+                            <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; font-weight:700;">${escapeHtml(lockReason)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            // 3. APPROVED CARD
             else if (approvedRegs.length > 0) {
                 card.className = 'bento-day-card card-theme-approved';
                 const firstApproved = approvedRegs[0];
@@ -718,7 +740,7 @@
                     </div>
                 `;
             }
-            // 3. PENDING APPLICATIONS CARD
+            // 4. PENDING APPLICATIONS CARD
             else if (pendingRegs.length > 0) {
                 card.className = 'bento-day-card card-theme-pending';
                 const firstPending = pendingRegs[0];
@@ -1086,7 +1108,11 @@
 
             // 1. ADMIN MODE
             if (isAdminSession) {
-                if (adminDayToolbar) adminDayToolbar.style.display = 'block';
+                if (adminDayWrapper) adminDayWrapper.style.display = 'block';
+                if (adminDayToolbar) adminDayToolbar.style.display = 'none'; // Collapse by default
+                if (toggleAdminAssignIcon) toggleAdminAssignIcon.className = 'fa-solid fa-circle-plus';
+                if (toggleAdminAssignText) toggleAdminAssignText.textContent = 'Đăng ký bổ sung';
+                if (adminAssignReasonInput) adminAssignReasonInput.value = '';
                 populateAdminAssignSelect();
 
                 if (pendingListBanner) pendingListBanner.style.display = 'block';
@@ -1104,7 +1130,12 @@
                                 <button type="button" class="btn btn-danger btn-sm btn-modal-act" data-act="delete" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-trash-can"></i> Xóa</button>
                             `;
 
-                            if (reg.status === 'approved') {
+                            if (reg.status === 'locked' || reg.empCode === 'KHONG DANG KY' || reg.empCode === 'LOCKED') {
+                                badgeHtml = `<span style="font-size:10px; background:#ede9fe; color:#6d28d9; padding:1px 6px; border-radius:6px; font-weight:700;">🔒 Khóa Lịch</span>`;
+                                actBtns = `
+                                    <button type="button" class="btn btn-danger btn-sm btn-modal-act" data-act="delete" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-unlock"></i> Mở Khóa / Xóa</button>
+                                `;
+                            } else if (reg.status === 'approved') {
                                 badgeHtml = `<span style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:6px; font-weight:700;">Đã Duyệt</span>`;
                                 actBtns = `
                                     <button type="button" class="btn btn-secondary btn-sm btn-modal-act" data-act="reject" data-id="${reg.id}" style="padding:2px 8px; font-size:11px;"><i class="fa-solid fa-xmark"></i> Hủy Duyệt</button>
@@ -1134,13 +1165,34 @@
                     }
                 }
 
-                if (registerForm) registerForm.style.display = 'none'; // Admin uses admin toolbar
+                if (registerForm) registerForm.style.display = 'none'; // Admin uses admin controls
             } 
             // 2. REGULAR USER MODE
             else {
+                if (adminDayWrapper) adminDayWrapper.style.display = 'none';
                 if (adminDayToolbar) adminDayToolbar.style.display = 'none';
 
-                if (!isTargetConfig || !isTargetMonthOpen) {
+                const lockedItem = dayAllRegs.find(r => r.status === 'locked' || r.empCode === 'KHONG DANG KY' || r.empCode === 'LOCKED');
+
+                if (lockedItem) {
+                    if (registerForm) registerForm.style.display = 'none';
+                    if (pendingListBanner) {
+                        pendingListBanner.style.display = 'block';
+                        const lockReason = lockedItem.reason || lockedItem.note || 'Ngày nghỉ/sự kiện nội bộ';
+                        if (pendingCountBadge) pendingCountBadge.textContent = 'Đã Khóa';
+                        if (pendingItemsContainer) {
+                            pendingItemsContainer.innerHTML = `
+                                <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px; padding:12px 14px; font-size:12.5px; color:#5b21b6; line-height:1.6;">
+                                    <div style="font-weight:800; display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:13px;">
+                                        <i class="fa-solid fa-lock" style="color:#7c3aed;"></i>
+                                        <span>NGÀY NÀY ĐÃ ĐƯỢC KHÓA ĐĂNG KÝ</span>
+                                    </div>
+                                    <div>Lý do khóa: <strong>${escapeHtml(lockReason)}</strong></div>
+                                </div>
+                            `;
+                        }
+                    }
+                } else if (!isTargetConfig || !isTargetMonthOpen) {
                     if (registerForm) registerForm.style.display = 'none';
                     if (pendingListBanner) {
                         pendingListBanner.style.display = 'block';
@@ -1226,41 +1278,76 @@
             });
         }
 
+        // Toggle Admin Assign Toolbar inside Date Modal
+        if (btnToggleAdminAssign) {
+            btnToggleAdminAssign.addEventListener('click', () => {
+                if (adminDayToolbar) {
+                    const isHidden = (adminDayToolbar.style.display === 'none' || !adminDayToolbar.style.display);
+                    if (isHidden) {
+                        adminDayToolbar.style.display = 'block';
+                        if (toggleAdminAssignIcon) toggleAdminAssignIcon.className = 'fa-solid fa-circle-minus';
+                        if (toggleAdminAssignText) toggleAdminAssignText.textContent = 'Thu gọn';
+                        if (adminAssignReasonInput) adminAssignReasonInput.focus();
+                    } else {
+                        adminDayToolbar.style.display = 'none';
+                        if (toggleAdminAssignIcon) toggleAdminAssignIcon.className = 'fa-solid fa-circle-plus';
+                        if (toggleAdminAssignText) toggleAdminAssignText.textContent = 'Đăng ký bổ sung';
+                    }
+                }
+            });
+        }
+
         // Admin Assign Submit (Silent - No loud public broadcast)
         if (btnAdminAssignSubmit) {
             btnAdminAssignSubmit.addEventListener('click', async () => {
                 const dateStr = modalDateInput.value;
                 const selectedVal = adminAssignEmpSelect ? adminAssignEmpSelect.value : '';
                 const statusVal = adminAssignStatusSelect ? adminAssignStatusSelect.value : 'approved';
-                const reasonVal = adminAssignReasonInput ? adminAssignReasonInput.value.trim() : 'Trưởng nhóm phân công';
+                let reasonVal = (adminAssignReasonInput && adminAssignReasonInput.value.trim()) ? adminAssignReasonInput.value.trim() : '';
 
-                if (!selectedVal) {
-                    showToast('Vui lòng chọn nhân viên!', 'warning');
-                    return;
+                let empCode = '';
+                let empName = '';
+
+                if (statusVal === 'locked') {
+                    empCode = 'LOCKED';
+                    empName = 'KHÓA LỊCH';
+                    reasonVal = reasonVal || 'Lịch đã khóa';
+                } else {
+                    if (!selectedVal) {
+                        showToast('Vui lòng chọn nhân viên!', 'warning');
+                        return;
+                    }
+                    const parts = selectedVal.split('|');
+                    empCode = parts[0];
+                    empName = parts[1];
+                    reasonVal = reasonVal || 'Đăng ký bổ sung';
                 }
 
-                const [empCode, empName] = selectedVal.split('|');
                 const nowStr = getCloudServerNow().toLocaleString('vi-VN');
                 const tempRegId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-                // Remove existing if any on same day and emp
-                registrationsList = registrationsList.filter(r => !(r.dateStr === dateStr && r.empCode === empCode));
+                // Remove existing lock or existing on same emp
+                if (statusVal === 'locked') {
+                    registrationsList = registrationsList.filter(r => !(r.dateStr === dateStr && (r.status === 'locked' || r.empCode === 'LOCKED' || r.empCode === 'KHONG DANG KY')));
+                } else {
+                    registrationsList = registrationsList.filter(r => !(r.dateStr === dateStr && r.empCode === empCode));
+                }
 
                 registrationsList.push({
                     id: tempRegId,
                     dateStr: dateStr,
                     empCode: empCode,
                     empName: empName,
-                    reason: reasonVal || 'Trưởng nhóm phân công',
+                    reason: reasonVal,
                     status: statusVal,
-                    adminNote: 'Phân công bởi Trưởng nhóm',
+                    adminNote: '',
                     createdAt: nowStr
                 });
 
                 saveData(false); // Silent save (no broadcast alert)
                 refreshAllUI();
                 renderDayModalContent(dateStr, true);
-                showToast(`Đã lưu phân công cho ${empName}!`, 'success');
+                showToast(statusVal === 'locked' ? `Đã khóa ngày ${dateStr}!` : `Đã lưu đăng ký cho ${empName}!`, 'success');
 
                 if (supabaseClient) {
                     await syncDayToSupabase(dateStr);
