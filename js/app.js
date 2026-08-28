@@ -1079,10 +1079,9 @@
                 }
 
                 const nowStr = getCloudServerNow().toLocaleString('vi-VN');
-                const regId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const tempRegId = 'reg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-                const newRecord = {
-                    id: regId,
+                const payload = {
                     date_str: dateStr,
                     emp_code: empCode,
                     emp_name: empName,
@@ -1092,27 +1091,25 @@
                     created_at: nowStr
                 };
 
+                let assignedId = tempRegId;
+
                 if (supabaseClient) {
                     updateCloudBadge('syncing', 'Đang gửi đơn...');
                     try {
-                        let { error } = await supabaseClient.from('registrations').insert([newRecord]);
+                        const { data, error } = await supabaseClient.from('registrations').insert([payload]).select();
                         if (error) {
-                            console.warn('Fallback payload try...', error);
-                            await supabaseClient.from('registrations').insert([{
-                                date_str: dateStr,
-                                emp_code: empCode,
-                                emp_name: empName,
-                                note: reasonVal,
-                                created_at: nowStr
-                            }]);
+                            console.warn('Insert error detail:', error);
+                            showToast(`Lưu ý: ${error.message || 'Lỗi lưu Cloud'}`, 'warning');
+                        } else if (data && data.length > 0) {
+                            assignedId = data[0].id || tempRegId;
                         }
                     } catch (err) {
-                        console.warn('Insert error:', err);
+                        console.warn('Insert exception:', err);
                     }
                 }
 
                 registrationsList.push({
-                    id: regId,
+                    id: assignedId,
                     dateStr: dateStr,
                     empCode: empCode,
                     empName: empName,
